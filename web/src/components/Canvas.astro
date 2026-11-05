@@ -108,15 +108,29 @@ const { class: className, ...props } = Astro.props;
     </button>
     <input id="file-input" type="file" accept="image/*" hidden multiple />
   </div>
-  <div class="color-palette">
-    <button data-action="change-color" data-color="var(--adraw-stroke)" class="swatch" style="--swatch: var(--adraw-stroke)"></button>
-    <button data-action="change-color" data-color="#f22" class="swatch swatch-bordered" style="--swatch: #f22"></button>
-    <button data-action="change-color" data-color="#8f8" class="swatch swatch-bordered" style="--swatch: #8f8"></button>
-    <button data-action="change-color" data-color="#08f" class="swatch swatch-bordered" style="--swatch: #08f"></button>
-    <button data-action="change-color" data-color="#ff0" class="swatch swatch-bordered" style="--swatch: #ff0"></button>
-    <button data-action="change-color" data-color="#0ff" class="swatch swatch-bordered" style="--swatch: #0ff"></button>
-    <button data-action="change-color" data-color="#f0f" class="swatch swatch-bordered" style="--swatch: #f0f"></button>
-    <button data-action="change-color" data-color="#fa0" class="swatch swatch-bordered" style="--swatch: #fa0"></button>
+  <div class="style-panel">
+    <span>Stroke</span>
+    <div class="color-palette">
+      <button data-action="change-stroke" title="Default" data-color="" class="swatch" style="--swatch: var(--adraw-stroke)" aria-pressed="true"></button>
+      <button data-action="change-stroke" title="Red" data-color="#f22" class="swatch" style="--swatch: #f22"></button>
+      <button data-action="change-stroke" title="Green" data-color="#8f8" class="swatch" style="--swatch: #8f8"></button>
+      <button data-action="change-stroke" title="Blue" data-color="#08f" class="swatch" style="--swatch: #08f"></button>
+      <button data-action="change-stroke" title="Yellow" data-color="#ff0" class="swatch" style="--swatch: #ff0"></button>
+      <button data-action="change-stroke" title="Cyan" data-color="#0ff" class="swatch" style="--swatch: #0ff"></button>
+      <button data-action="change-stroke" title="Magenta" data-color="#f0f" class="swatch" style="--swatch: #f0f"></button>
+      <button data-action="change-stroke" title="Orange" data-color="#fa0" class="swatch" style="--swatch: #fa0"></button>
+    </div>
+    <span>Fill (background)</span>
+    <div class="color-palette">
+      <button data-action="change-fill" title="Default (transparent)" data-color="" class="swatch" style="--swatch: transparent" aria-pressed="true"></button>
+      <button data-action="change-fill" title="Red" data-color="#f224" class="swatch" style="--swatch: #f224"></button>
+      <button data-action="change-fill" title="Green" data-color="#8f84" class="swatch" style="--swatch: #8f84"></button>
+      <button data-action="change-fill" title="Blue" data-color="#08f4" class="swatch" style="--swatch: #08f4"></button>
+      <button data-action="change-fill" title="Yellow" data-color="#ff04" class="swatch" style="--swatch: #ff04"></button>
+      <button data-action="change-fill" title="Cyan" data-color="#0ff4" class="swatch" style="--swatch: #0ff4"></button>
+      <button data-action="change-fill" title="Magenta" data-color="#f0f4" class="swatch" style="--swatch: #f0f4"></button>
+      <button data-action="change-fill" title="Orange" data-color="#fa04" class="swatch" style="--swatch: #fa04"></button>
+    </div>
   </div>
   <div class="canvas-container"></div>
 </div>
@@ -171,13 +185,12 @@ const { class: className, ...props } = Astro.props;
     height: 1.5rem;
     background: var(--color-border);
   }
-  .color-palette {
+  .style-panel {
     position: absolute;
     top: 4rem;
     right: 0.5rem;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    align-items: center;
+    display: flex;
+    flex-direction: column;
     gap: 0.5rem;
     padding: 0.5rem;
     background: var(--color-card);
@@ -187,14 +200,26 @@ const { class: className, ...props } = Astro.props;
       0 10px 15px -3px color-mix(in oklab, black 5%, transparent),
       0 4px 6px -4px color-mix(in oklab, black 5%, transparent);
   }
+  .color-palette {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: center;
+    gap: 0.25rem;
+  }
   .swatch {
     width: 1rem;
     height: 1rem;
+    padding: 0.25rem;
     border-radius: 0.375rem;
-    background: var(--swatch);
-  }
-  .swatch-bordered {
-    border: 1px solid var(--color-border);
+    &[aria-pressed="true"] {
+      background: color-mix(in oklab, var(--color-primary) 10%, transparent);
+    }
+    &::after {
+      content: "";
+      display: block;
+      border-radius: 50%;
+      background: var(--swatch);
+    }
   }
   .canvas-container {
     width: 100%;
@@ -290,9 +315,14 @@ const { class: className, ...props } = Astro.props;
           fileInput.click()
           break
         }
-        case "change-color": {
+        case "change-stroke": {
           const {color} = btn.dataset
-          canvas.setStyle({ strokeColor: color! })
+          canvas.setStyle({ strokeColor: color || "var(--adraw-stroke, transparent)" })
+          break
+        }
+        case "change-fill": {
+          const {color} = btn.dataset
+          canvas.setStyle({ fillColor: color || "var(--adraw-fill, transparent)" })
           break
         }
         case "toggle-tool-lock": {
