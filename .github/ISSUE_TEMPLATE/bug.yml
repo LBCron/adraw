@@ -1,0 +1,75 @@
+name: Bug report
+description: Report a reproducible defect in adraw.
+title: "[bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues first. Include a minimal reproduction and the
+        exact package version when possible.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Provide a minimal reproduction, repository or sandbox link.
+      placeholder: |
+        1. Create a canvas with...
+        2. Draw a...
+        3. Observe...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: adraw version
+      placeholder: "@adraw/core 0.5.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - "@adraw/core"
+        - "@adraw/react"
+        - "@adraw/vue"
+        - "@adraw/svelte"
+        - "@adraw/solid"
+        - "@adraw/angular"
+        - "@adraw/web-components"
+        - docs / examples
+        - other
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, operating system, Node and package manager versions.
+      placeholder: "Chrome 130 / macOS 15 / Node 24 / pnpm 12.14"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste console errors, stack traces or screenshots.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Related issues, workarounds or regression information.
+    validations:
+      required: false

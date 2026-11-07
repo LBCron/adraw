@@ -1,0 +1,92 @@
+name: Feature request
+description: Propose a new capability or an improvement to adraw.
+title: "[feature] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a feature. Describe the problem first, then the
+        proposed solution. Link the relevant roadmap item when there is one.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem does this feature solve? Who is affected?
+      placeholder: As a developer or agent, I need...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the API, behavior or UX you expect.
+      placeholder: |
+        ```ts
+        canvas.exampleMethod(...)
+        ```
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches, workarounds or prior art.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - core / engine
+        - DOM adapter
+        - framework adapter
+        - documentation
+        - tooling / CI
+        - ecosystem package
+        - other
+    validations:
+      required: true
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      options:
+        - "5 - unlocks adoption or a central use case"
+        - "4 - major improvement for most users"
+        - "3 - clear improvement for a segment"
+        - "2 - nice to have"
+        - "1 - marginal"
+    validations:
+      required: true
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Estimated effort
+      options:
+        - "S - up to 1 week"
+        - "M - 2 to 4 weeks"
+        - "L - 1 to 2 months"
+        - "XL - more than 2 months"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What must be true for this issue to be closed?
+      placeholder: |
+        - [ ] The public API is documented with JSDoc.
+        - [ ] Unit tests cover the new behavior.
+        - [ ] The docs and examples are updated.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Links, mockups, related issues or roadmap references.
+    validations:
+      required: false
