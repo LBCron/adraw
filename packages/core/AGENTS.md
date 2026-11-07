@@ -35,7 +35,7 @@ src/
   options.ts         CanvasOptions, AdrawCanvasOptions, MediaInput, ToImageOptions
   text.ts            TextMeasurer, measureTextLayout, wrapping + line/anchor helpers
   arrow-bindings.ts  arrow-to-element binding/synchronization math
-  text-bindings.ts   bound text: max width/height, centering, container growth, sync
+  text-bindings.ts   bound text: max width/height, centering, container growth, lock/visibility sync
   groups.ts          group hierarchy, bounds sync, selection levels, group/ungroup math
   style.ts           style types and global defaults
   store.ts           AdrawStore / AdrawSnapshot: state snapshots for adapters
@@ -100,6 +100,8 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 | `group()` / `ungroup()`                                 | Group the selection / remove one group level              |
 | `bringToFront(ids)` / `sendToBack(ids)`                 | Restack elements (groups carry their children)            |
 | `setZIndex(id, z)`                                      | Set one element's exact stacking index                    |
+| `setLocked(ids, locked)` / `setVisible(ids, visible)`   | Toggle flags; groups inherit; selection is clamped        |
+| `toggleLocked(ids)` / `toggleVisible(ids)`              | Flip each target's own lock or visibility flag            |
 | `updateElement(id, patch, options?)`                    | Validated partial update for one element                  |
 | `updateElements(updates, options?)`                     | Atomic batch of partial updates with one checkpoint       |
 | `copy()` / `cut()` / `paste(point?)`                    | Clipboard operations (Ctrl/Cmd+C/X/V)                     |
@@ -272,7 +274,7 @@ Also: `moveElement`, `resizeElement`, `rotateElement`. Hit-testing and selection
 
 File: `src/history.ts`. Stack-based undo/redo. `pushHistory()` records the current state as a checkpoint, and `undo()`/`redo()` restore elements and publish the change.
 
-Programmatic changes can stay out of history: `addElement`, `insertMedia`, `updateElement`, `updateElements`, `loadDocument` and `setElements` accept `{ history: false }`, and `withoutHistory(fn)` suppresses every checkpoint pushed inside `fn` (nested calls coalesce). Changes made outside history are folded into existing checkpoints, so undo/redo never drops them. Use `clearHistory()` after loading or initializing a document to make the current state the new undo baseline; it notifies state subscribers so history availability refreshes. `pushHistory()` is a no-op inside `withoutHistory`.
+Programmatic changes can stay out of history: `addElement`, `insertMedia`, `updateElement`, `updateElements`, `setLocked`, `setVisible`, `loadDocument` and `setElements` accept `{ history: false }`, and `withoutHistory(fn)` suppresses every checkpoint pushed inside `fn` (nested calls coalesce). Changes made outside history are folded into existing checkpoints, so undo/redo never drops them. Use `clearHistory()` after loading or initializing a document to make the current state the new undo baseline; it notifies state subscribers so history availability refreshes. `pushHistory()` is a no-op inside `withoutHistory`.
 
 ## Clipboard
 
@@ -311,6 +313,7 @@ history.test.ts                — undo/redo stack
 scene.test.ts                  — atomic scene commits, history, binding sync, selection clamping
 store.test.ts                  — AdrawStore snapshots, slice reuse, readiness and disposal
 update-element.test.ts         — partial element patches, derived-field checks, groups, batches
+element-flags.test.ts          — lock/visibility flags, group inheritance, selection clamping
 state-notifier.test.ts         — operation scopes, dispatch, listener snapshots and error precedence
 operation-publication.test.ts  — coherent store publications across gestures, failures and async boundaries
 operation-matrix.test.ts       — publication count and changed kinds for every public mutating entry

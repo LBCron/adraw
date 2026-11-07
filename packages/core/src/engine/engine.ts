@@ -1,6 +1,7 @@
 import { clamp } from "../coordinates"
 import { getElementsBounds, getNextZIndex } from "../elements"
 import {
+  collectSubtreeIds,
   createGroupIndex,
   getContextChain,
   getLeafDescendantIds,
@@ -637,9 +638,9 @@ export class CanvasEngine {
    *
    * The patch can only contain fields the element type owns; `id` and `type`
    * are immutable. Derived fields are rejected: line, arrow and path bounds,
-   * free text height, group bounds and rotation, and the position, size and
-   * visibility of bound text. Arrow bindings, bound text and group bounds are
-   * re-synchronized after the patch.
+   * free text height, group bounds and rotation, and the position, size, lock
+   * state and visibility of bound text. Arrow bindings, bound text and group
+   * bounds are re-synchronized after the patch.
    *
    * @param id Element id.
    * @param patch Fields to update.
@@ -911,6 +912,187 @@ export class CanvasEngine {
 
     const change = this.replaceSceneWithHistory(next, options.history)
     this.publishSceneChange(change)
+  }
+
+  /**
+   * Lock or unlock elements. Locked elements stay visible and exportable but
+   * are skipped by hit-testing, marquee selection and `selectAll`. Locking a
+   * group locks its descendants through inherited state; descendant flags are
+   * not rewritten. Locking removes the affected elements from the current
+   * selection.
+   *
+   * @param ids Element id or iterable of ids.
+   * @param locked Whether the elements should be locked.
+   * @param options `{ history }` to skip the checkpoint.
+   * @returns The targeted elements that exist, after the update.
+   * @example
+   * ```ts
+   * canvas.setLocked("rect-1", true)
+   * canvas.setLocked(["rect-1", "note-1"], false)
+   * ```
+   */
+  setLocked(
+    ids: ElementId | Iterable<ElementId>,
+    locked: boolean,
+    options: { history?: boolean } = {},
+  ): CanvasElement[] {
+    return this.setElementFlag(ids, "locked", locked, options)
+  }
+
+  /**
+   * Show or hide elements. Hidden elements are not rendered, hit-tested,
+   * marquee-selected or exported. Hiding a group hides its descendants through
+   * inherited state; descendant flags are not rewritten. Hiding removes the
+   * affected elements from the current selection.
+   *
+   * Bound text visibility is derived from its container: call `setVisible` on
+   * the container or group instead of on the bound text.
+   *
+   * @param ids Element id or iterable of ids.
+   * @param visible Whether the elements should be visible.
+   * @param options `{ history }` to skip the checkpoint.
+   * @returns The targeted elements that exist, after the update.
+   * @example
+   * ```ts
+   * canvas.setVisible("rect-1", false)
+   * canvas.setVisible("rect-1", true)
+   * ```
+   */
+  setVisible(
+    ids: ElementId | Iterable<ElementId>,
+    visible: boolean,
+    options: { history?: boolean } = {},
+  ): CanvasElement[] {
+    return this.setElementFlag(ids, "visible", visible, options)
+  }
+
+  /**
+   * Flip the `locked` flag of each targeted element. Inherited lock state from
+   * a group ancestor still applies.
+   *
+   * @param ids Element id or iterable of ids.
+   * @param options `{ history }` to skip the checkpoint.
+   * @returns The targeted elements that exist, after the update.
+   */
+  toggleLocked(
+    ids: ElementId | Iterable<ElementId>,
+    options: { history?: boolean } = {},
+  ): CanvasElement[] {
+    return this.setElementFlag(ids, "locked", null, options)
+  }
+
+  /**
+   * Flip the `visible` flag of each targeted element. Hiding removes the
+   * affected elements from the current selection. Bound text visibility is
+   * derived from its container, so it cannot be toggled directly.
+   *
+   * @param ids Element id or iterable of ids.
+   * @param options `{ history }` to skip the checkpoint.
+   * @returns The targeted elements that exist, after the update.
+   */
+  toggleVisible(
+    ids: ElementId | Iterable<ElementId>,
+    options: { history?: boolean } = {},
+  ): CanvasElement[] {
+    return this.setElementFlag(ids, "visible", null, options)
+  }
+
+  // Set or toggle one boolean flag on the targeted elements, prune hidden or
+  // locked subtrees from the selection, and publish one coherent change.
+  private setElementFlag(
+    ids: ElementId | Iterable<ElementId>,
+    flag: "locked" | "visible",
+    value: boolean | null,
+    options: { history?: boolean },
+  ): CanvasElement[] {
+    return runStateOperation(this, () => {
+      const targets = [...new Set(normalizeIds(ids))]
+      if (targets.length === 0) {
+        return []
+      }
+
+      const current = this.scene.getElements()
+      const applicable: ElementId[] = []
+      for (const id of targets) {
+        const element = current.get(id)
+        if (!element) {
+          continue
+        }
+        if (
+          element.type === "text" &&
+          element.containerId !== null &&
+          element.containerId !== undefined
+        ) {
+          const flagName = flag === "locked" ? "lock state" : "visibility"
+          throw new TypeError(
+            `Bound text ${flagName} is derived from its container; set it on the container instead`,
+          )
+        }
+        applicable.push(id)
+      }
+      if (applicable.length === 0) {
+        return []
+      }
+
+      const restrictedRoots: ElementId[] = []
+      const change = this.commitSceneWithHistory((draft) => {
+        for (const id of applicable) {
+          const element = draft.elements.get(id)
+          if (!element) {
+            continue
+          }
+          const nextValue = value === null ? !element[flag] : value
+          if (element[flag] !== nextValue) {
+            draft.elements.set(id, { ...element, [flag]: nextValue })
+          }
+          if (
+            (flag === "locked" && nextValue) ||
+            (flag === "visible" && !nextValue)
+          ) {
+            restrictedRoots.push(id)
+          }
+        }
+
+        if (restrictedRoots.length === 0) {
+          return
+        }
+
+        const index = createGroupIndex(draft.elements)
+        const restricted = collectSubtreeIds(index, restrictedRoots)
+        const boundTextByContainer = new Map<ElementId, ElementId[]>()
+        for (const element of draft.elements.values()) {
+          if (element.type === "text" && element.containerId) {
+            const list = boundTextByContainer.get(element.containerId) ?? []
+            list.push(element.id)
+            boundTextByContainer.set(element.containerId, list)
+          }
+        }
+        const textTargets: ElementId[] = []
+        for (const id of restricted) {
+          for (const textId of boundTextByContainer.get(id) ?? []) {
+            textTargets.push(textId)
+          }
+        }
+        for (const id of textTargets) {
+          restricted.add(id)
+        }
+        for (const id of restricted) {
+          draft.selectedIds.delete(id)
+        }
+      }, options.history)
+
+      this.publishSceneChange(change)
+
+      const elements = this.scene.getElements()
+      const updated: CanvasElement[] = []
+      for (const id of applicable) {
+        const element = elements.get(id)
+        if (element) {
+          updated.push(element)
+        }
+      }
+      return updated
+    })
   }
 
   /**

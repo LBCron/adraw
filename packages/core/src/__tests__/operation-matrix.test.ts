@@ -139,6 +139,34 @@ const operations: OperationCase[] = [
   {
     expectedKinds: ["elements", "history", "selection"],
     expectedSnapshots: 1,
+    name: "setLocked",
+    run: (canvas) => canvas.setLocked("a", true),
+    setup: addSelectedRect,
+  },
+  {
+    expectedKinds: ["elements", "history", "selection"],
+    expectedSnapshots: 1,
+    name: "setVisible",
+    run: (canvas) => canvas.setVisible("a", false),
+    setup: addSelectedRect,
+  },
+  {
+    expectedKinds: ["elements", "history"],
+    expectedSnapshots: 1,
+    name: "toggleLocked",
+    run: (canvas) => canvas.toggleLocked("a"),
+    setup: (canvas) => addRect(canvas),
+  },
+  {
+    expectedKinds: [],
+    expectedSnapshots: 0,
+    name: "setLocked already applied",
+    run: (canvas) => canvas.setLocked("a", false),
+    setup: (canvas) => addRect(canvas),
+  },
+  {
+    expectedKinds: ["elements", "history", "selection"],
+    expectedSnapshots: 1,
     name: "loadDocument",
     run: (canvas) => {
       canvas.loadDocument({ elements: [makeRect("a")], version: 1 })

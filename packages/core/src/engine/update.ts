@@ -27,8 +27,8 @@ import { setElementZIndex } from "./z-order"
  * A validated partial update for one canvas element. `id` and `type` are
  * immutable, and each element type only accepts the fields it owns. Derived
  * fields — line, arrow and path bounds, text height, group bounds and rotation,
- * and the position of bound text — are rejected; update their source fields
- * instead.
+ * and the position, size, lock state and visibility of bound text — are
+ * rejected; update their source fields instead.
  *
  * @example
  * ```ts
@@ -163,6 +163,7 @@ const DERIVED_FIELDS: Partial<Record<ElementType, ReadonlySet<string>>> = {
 const BOUND_TEXT_DERIVED = new Set([
   "autoSize",
   "height",
+  "locked",
   "rotation",
   "visible",
   "width",
@@ -196,10 +197,7 @@ function sameValue(a: unknown, b: unknown): boolean {
       return false
     }
     for (const key of aKeys) {
-      if (
-        !Object.prototype.hasOwnProperty.call(b, key) ||
-        !sameValue(a[key], b[key])
-      ) {
+      if (!Object.hasOwn(b, key) || !sameValue(a[key], b[key])) {
         return false
       }
     }

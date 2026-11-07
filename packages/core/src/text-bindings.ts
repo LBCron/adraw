@@ -277,16 +277,19 @@ export function syncTextBindings(
     const center = getBoundTextCenter(currentContainer, next.labelPosition)
     const x = center.x - next.width / 2
     const y = center.y - next.height / 2
+    const locked = currentContainer.locked
     const visible = currentContainer.visible
     if (
       next !== text ||
       text.x !== x ||
       text.y !== y ||
       text.rotation !== center.rotation ||
+      text.locked !== locked ||
       text.visible !== visible
     ) {
       elements.set(text.id, {
         ...next,
+        locked,
         rotation: center.rotation,
         visible,
         x,

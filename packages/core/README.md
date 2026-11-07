@@ -134,8 +134,8 @@ const { updated, missing } = canvas.updateElements([
 
 `id` and `type` are immutable. Derived fields are rejected: line, arrow and path
 `width`/`height`, free-text `height` and `wrapWidth`, group `width`/`height`/
-`rotation`, and the position, size and visibility of bound text. Use the source
-fields instead (`startX`/`endX` for lines, `points` for paths,
+`rotation`, and the position, size, lock state and visibility of bound text. Use
+the source fields instead (`startX`/`endX` for lines, `points` for paths,
 `text`/`fontSize`/`autoSize` for text, and the container for bound text).
 
 Group-specific behavior:
@@ -276,6 +276,30 @@ stay top-level until explicitly grouped.
 Deleting a selected group removes its whole subtree; deleting an individual
 child prunes it from the group, and empty groups disappear. The eraser removes
 the outermost group when it touches any descendant.
+
+## Locking and visibility
+
+```ts
+canvas.setLocked("rect-1", true)
+canvas.setLocked(["rect-1", "note-1"], false)
+canvas.toggleLocked("rect-1")
+
+canvas.setVisible("rect-1", false)
+canvas.toggleVisible("rect-1")
+```
+
+Locked elements stay visible and exportable but are skipped by hit-testing,
+marquee selection and `selectAll()`. Hidden elements are not rendered,
+hit-tested, marquee-selected or exported. Setting a flag on a group affects its
+descendants through inherited state; the descendants' own flags are not
+rewritten.
+
+Locking or hiding the current selection removes the affected elements (and their
+group subtrees) from the selection. Bound text locks and visibility follow its
+container, so call `setLocked` / `setVisible` on the container instead of the
+text. Both methods record one history checkpoint unless `{ history: false }` is
+passed. Arrow bindings to hidden targets keep resolving from the target
+geometry.
 
 ## Z-order
 
