@@ -111,6 +111,45 @@ Rectangles, ellipses and diamonds accept `fillColor`; every element accepts `opa
 (`0`–`1`). A translucent highlighter background is just a rectangle with
 `fillColor: "#ffd43b"` and `opacity: 0.35`. Freehand paths are stroked only.
 
+## Updating elements
+
+Use `updateElement` for one element and `updateElements` for an atomic batch.
+Both validate the fields the element type owns, re-synchronize arrow bindings,
+bound text and group bounds, and record one history checkpoint unless
+`{ history: false }` is passed. A batch publishes one snapshot.
+
+```ts
+const rect = canvas.updateElement("rect-1", {
+  fillColor: "#ffd43b",
+  strokeWidth: 3,
+  x: 40,
+})
+// null when the id is unknown
+
+const { updated, missing } = canvas.updateElements([
+  { id: "rect-1", patch: { x: 40 } },
+  { id: "text-1", patch: { text: "Hello" } },
+])
+```
+
+`id` and `type` are immutable. Derived fields are rejected: line, arrow and path
+`width`/`height`, free-text `height` and `wrapWidth`, group `width`/`height`/
+`rotation`, and the position, size and visibility of bound text. Use the source
+fields instead (`startX`/`endX` for lines, `points` for paths,
+`text`/`fontSize`/`autoSize` for text, and the container for bound text).
+
+Group-specific behavior:
+
+- `x`/`y` translate the whole subtree.
+- `zIndex` restacks the group and its descendants as a unit.
+- `opacity` applies to every leaf descendant.
+- `children` can rewire the group; children must exist, be unique, and not
+  already belong to another group.
+
+Patching an arrow endpoint does not clear its binding: the binding keeps
+controlling that endpoint. Clear `startBinding`/`endBinding` in the same patch to
+move a bound endpoint.
+
 ## Arrows and bindings
 
 The `arrow` tool draws a straight arrow with a filled head (`startArrowhead` and

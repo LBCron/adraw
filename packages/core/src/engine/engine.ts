@@ -72,6 +72,13 @@ import { handleShortcutKey } from "./shortcuts"
 import { notifyState, runStateOperation } from "./state-notifier"
 import { applyStyleToElement, getElementStyle } from "./style"
 import {
+  applyElementPatch,
+  validateElementPatch,
+  type ElementPatch,
+  type ElementUpdate,
+  type ElementUpdateResult,
+} from "./update"
+import {
   bringElementsToFront,
   sendElementsToBack,
   setElementZIndex,
@@ -92,6 +99,20 @@ function normalizeIds(
   ids: ElementId | Iterable<ElementId>,
 ): Iterable<ElementId> {
   return typeof ids === "string" ? [ids] : ids
+}
+
+function normalizeUpdates(
+  updates: readonly ElementUpdate[] | ReadonlyMap<ElementId, ElementPatch>,
+): ElementUpdate[] {
+  if (updates instanceof Map) {
+    return [...updates].map(([id, patch]) => ({ id, patch }))
+  }
+  if (!Array.isArray(updates)) {
+    throw new TypeError(
+      "updateElements: expected an array of updates or a Map of ids to patches",
+    )
+  }
+  return [...updates]
 }
 
 // Reduce several styles to the fields they all share with the same value.
@@ -608,6 +629,118 @@ export class CanvasEngine {
 
       this.publishSceneChange(change)
       return inputs
+    })
+  }
+
+  /**
+   * Update one element with a validated partial patch.
+   *
+   * The patch can only contain fields the element type owns; `id` and `type`
+   * are immutable. Derived fields are rejected: line, arrow and path bounds,
+   * free text height, group bounds and rotation, and the position, size and
+   * visibility of bound text. Arrow bindings, bound text and group bounds are
+   * re-synchronized after the patch.
+   *
+   * @param id Element id.
+   * @param patch Fields to update.
+   * @param options `{ history }` to skip the checkpoint.
+   * @returns The updated element, or `null` when the id is unknown.
+   * @example
+   * ```ts
+   * canvas.updateElement("rect-1", { fillColor: "#ffd43b", strokeWidth: 3 })
+   * ```
+   */
+  updateElement(
+    id: ElementId,
+    patch: ElementPatch,
+    options: { history?: boolean } = {},
+  ): CanvasElement | null {
+    const [updated] = this.updateElements([{ id, patch }], options).updated
+    return updated ?? null
+  }
+
+  /**
+   * Update several elements atomically with validated partial patches.
+   *
+   * Every patch is validated and applied in one scene commit, so an invalid
+   * patch leaves the canvas unchanged. The batch records one history checkpoint
+   * and publishes one snapshot. Duplicate ids are rejected; unknown ids are
+   * reported in `missing` and do not fail the batch.
+   *
+   * @param updates Array of `{ id, patch }` entries, or a map of ids to patches.
+   * @param options `{ history }` to skip the checkpoint.
+   * @returns The updated elements and the ids that were not found.
+   * @example
+   * ```ts
+   * const { updated, missing } = canvas.updateElements([
+   *   { id: "rect-1", patch: { x: 40 } },
+   *   { id: "text-1", patch: { text: "Hello" } },
+   * ])
+   * ```
+   */
+  updateElements(
+    updates: readonly ElementUpdate[] | ReadonlyMap<ElementId, ElementPatch>,
+    options: { history?: boolean } = {},
+  ): ElementUpdateResult {
+    return runStateOperation(this, () => {
+      const entries = normalizeUpdates(updates)
+      const seen = new Set<ElementId>()
+      for (const entry of entries) {
+        if (!entry || typeof entry.id !== "string") {
+          throw new TypeError(
+            "updateElements: every update needs a string element id",
+          )
+        }
+        if (seen.has(entry.id)) {
+          throw new TypeError(
+            `updateElements: duplicate update for "${entry.id}"`,
+          )
+        }
+        seen.add(entry.id)
+      }
+
+      const current = this.scene.getElements()
+      const applicable: ElementUpdate[] = []
+      const missing: ElementId[] = []
+      for (const entry of entries) {
+        if (current.has(entry.id)) {
+          applicable.push(entry)
+        } else {
+          missing.push(entry.id)
+        }
+      }
+
+      if (applicable.length === 0) {
+        return { missing, updated: [] }
+      }
+
+      const change = this.commitSceneWithHistory((draft) => {
+        for (const entry of applicable) {
+          const element = draft.elements.get(entry.id)
+          if (!element) {
+            continue
+          }
+          validateElementPatch(draft.elements, element, entry.patch)
+          applyElementPatch(
+            draft.elements,
+            element,
+            entry.patch,
+            this.textMeasurer,
+          )
+        }
+      }, options.history)
+
+      this.publishSceneChange(change)
+
+      const elements = this.scene.getElements()
+      const updated: CanvasElement[] = []
+      for (const entry of applicable) {
+        const element = elements.get(entry.id)
+        if (element) {
+          updated.push(element)
+        }
+      }
+      return { missing, updated }
     })
   }
 

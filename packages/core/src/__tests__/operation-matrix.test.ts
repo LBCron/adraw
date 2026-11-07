@@ -102,6 +102,41 @@ const operations: OperationCase[] = [
     run: (canvas) => canvas.addElement(makeRect("a")),
   },
   {
+    expectedKinds: ["elements", "history"],
+    expectedSnapshots: 1,
+    name: "updateElement",
+    run: (canvas) => canvas.updateElement("a", { x: 20 }),
+    setup: (canvas) => addRect(canvas),
+  },
+  {
+    expectedKinds: ["elements", "history"],
+    expectedSnapshots: 1,
+    name: "updateElements",
+    run: (canvas) => {
+      canvas.updateElements([
+        { id: "a", patch: { x: 20 } },
+        { id: "b", patch: { y: 20 } },
+      ])
+    },
+    setup: (canvas) => {
+      addRect(canvas, "a", 0)
+      addRect(canvas, "b", 1)
+    },
+  },
+  {
+    expectedKinds: [],
+    expectedSnapshots: 0,
+    name: "updateElement no-op",
+    run: (canvas) => canvas.updateElement("a", {}),
+    setup: (canvas) => addRect(canvas),
+  },
+  {
+    expectedKinds: [],
+    expectedSnapshots: 0,
+    name: "updateElement missing",
+    run: (canvas) => canvas.updateElement("missing", { x: 10 }),
+  },
+  {
     expectedKinds: ["elements", "history", "selection"],
     expectedSnapshots: 1,
     name: "loadDocument",

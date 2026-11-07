@@ -41,6 +41,9 @@ function geometrySignature(
     case "text": {
       return `text|${base}|${element.text}|${element.fontSize}|${element.fontFamily ?? ""}|${element.textAlign ?? ""}|${element.lineHeight ?? ""}|${element.autoSize ?? ""}|${element.wrapWidth ?? ""}|${element.strokeColor}`
     }
+    case "media": {
+      return `media|${base}|${element.src}`
+    }
     case "note": {
       return `note|${base}|${element.text}|${element.fontSize}|${element.fontFamily ?? ""}|${element.textAlign ?? ""}|${element.lineHeight ?? ""}|${element.padding}|${element.cornerRadius}|${element.fillColor}|${element.strokeColor}`
     }

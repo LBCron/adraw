@@ -2,6 +2,11 @@ export * from "./canvas"
 export * from "./coordinates"
 export * from "./elements"
 export { CanvasEngine } from "./engine/engine"
+export {
+  type ElementPatch,
+  type ElementUpdate,
+  type ElementUpdateResult,
+} from "./engine/update"
 export { AdrawStore, type AdrawSnapshot, type AdrawStoreOptions } from "./store"
 export type { Tool, ToolContext } from "./tools/base"
 export * from "./history"

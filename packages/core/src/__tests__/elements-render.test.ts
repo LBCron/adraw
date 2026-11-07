@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AdrawCanvas } from "../canvas"
-import { createPath, createRectangle } from "../elements"
+import { createMedia, createPath, createRectangle } from "../elements"
 import type {
   ElementId,
   PathElement,
@@ -181,6 +181,40 @@ describe("element node reconciliation", () => {
 
     expect(nodeFor(container, a.id)).toBe(nodeA)
     expect(nodeA.getAttribute("transform")).toContain("123.5")
+  })
+
+  it("updates a media element's src and size in place", () => {
+    const { canvas, container } = mount()
+    const image = createMedia({
+      height: 50,
+      id: "media",
+      locked: false,
+      mimeType: "image/png",
+      naturalHeight: 100,
+      naturalWidth: 200,
+      rotation: 0,
+      src: "data:image/png;base64,old",
+      visible: true,
+      width: 100,
+      x: 0,
+      y: 0,
+      zIndex: 0,
+    })
+    canvas.addElement(image, { history: false })
+    const node = nodeFor(container, "media")
+    const imageNode = node.querySelector("image")!
+    expect(imageNode.getAttribute("href")).toBe("data:image/png;base64,old")
+
+    canvas.updateElement("media", {
+      height: 60,
+      src: "data:image/png;base64,new",
+      width: 120,
+    })
+
+    expect(nodeFor(container, "media")).toBe(node)
+    expect(imageNode.getAttribute("href")).toBe("data:image/png;base64,new")
+    expect(imageNode.getAttribute("width")).toBe("120")
+    expect(imageNode.getAttribute("height")).toBe("60")
   })
 
   it("drops hidden elements' nodes and recreates them when visible again", () => {

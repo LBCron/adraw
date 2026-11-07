@@ -44,6 +44,7 @@ src/
     scene.ts         Scene: elements, selection, history, binding sync, atomic commits
     state-notifier.ts internal operation-scoped state publications
     style.ts        applyStyleToElement/getElementStyle: style write-back and read-back
+    update.ts       validated partial element patches (updateElement/updateElements)
     clipboard.ts     ClipboardManager + copy/paste element math (group expansion, id remap)
     media.ts         insertMedia sizing math (createMediaElements)
     selection.ts     selectAllIds, deleteSelectedElements
@@ -99,6 +100,8 @@ Public exports beyond the `AdrawCanvas` API (via `src/index.ts`): `CanvasEngine`
 | `group()` / `ungroup()`                                 | Group the selection / remove one group level              |
 | `bringToFront(ids)` / `sendToBack(ids)`                 | Restack elements (groups carry their children)            |
 | `setZIndex(id, z)`                                      | Set one element's exact stacking index                    |
+| `updateElement(id, patch, options?)`                    | Validated partial update for one element                  |
+| `updateElements(updates, options?)`                     | Atomic batch of partial updates with one checkpoint       |
 | `copy()` / `cut()` / `paste(point?)`                    | Clipboard operations (Ctrl/Cmd+C/X/V)                     |
 | `serializeClipboard()` / `deserializeClipboard(text)`   | Bridge the clipboard to/from serialized text              |
 | `undo()` / `redo()`                                     | History navigation                                        |
@@ -269,7 +272,7 @@ Also: `moveElement`, `resizeElement`, `rotateElement`. Hit-testing and selection
 
 File: `src/history.ts`. Stack-based undo/redo. `pushHistory()` records the current state as a checkpoint, and `undo()`/`redo()` restore elements and publish the change.
 
-Programmatic changes can stay out of history: `addElement`, `insertMedia`, `loadDocument` and `setElements` accept `{ history: false }`, and `withoutHistory(fn)` suppresses every checkpoint pushed inside `fn` (nested calls coalesce). Changes made outside history are folded into existing checkpoints, so undo/redo never drops them. Use `clearHistory()` after loading or initializing a document to make the current state the new undo baseline; it notifies state subscribers so history availability refreshes. `pushHistory()` is a no-op inside `withoutHistory`.
+Programmatic changes can stay out of history: `addElement`, `insertMedia`, `updateElement`, `updateElements`, `loadDocument` and `setElements` accept `{ history: false }`, and `withoutHistory(fn)` suppresses every checkpoint pushed inside `fn` (nested calls coalesce). Changes made outside history are folded into existing checkpoints, so undo/redo never drops them. Use `clearHistory()` after loading or initializing a document to make the current state the new undo baseline; it notifies state subscribers so history availability refreshes. `pushHistory()` is a no-op inside `withoutHistory`.
 
 ## Clipboard
 
@@ -307,6 +310,7 @@ elements.test.ts               — factory functions, clone, move, resize, rotat
 history.test.ts                — undo/redo stack
 scene.test.ts                  — atomic scene commits, history, binding sync, selection clamping
 store.test.ts                  — AdrawStore snapshots, slice reuse, readiness and disposal
+update-element.test.ts         — partial element patches, derived-field checks, groups, batches
 state-notifier.test.ts         — operation scopes, dispatch, listener snapshots and error precedence
 operation-publication.test.ts  — coherent store publications across gestures, failures and async boundaries
 operation-matrix.test.ts       — publication count and changed kinds for every public mutating entry

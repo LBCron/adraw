@@ -276,6 +276,7 @@ export function updateElementGeometry(
     }
     case "media": {
       const imageElement = group.getElementsByTagName("image")[0]
+      imageElement.setAttribute("href", element.src)
       imageElement.setAttribute("width", `${element.width}`)
       imageElement.setAttribute("height", `${element.height}`)
       break
